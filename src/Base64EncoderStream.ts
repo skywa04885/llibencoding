@@ -28,8 +28,7 @@ export class Base64EncoderStream extends LineEncoderStream {
     chunk = chunk.slice(0, chunk.length - bytes_remaining);
 
     // Creates the base64 string of the chunk, and makes the lines.
-    const base64_chunk: string = chunk.toString("base64");
-    this.lines(base64_chunk);
+    this.lines(Buffer.from(chunk.toString("base64"), this._encoding));
 
     // Calls the callback.
     callback();
@@ -42,9 +41,8 @@ export class Base64EncoderStream extends LineEncoderStream {
   public _flush(callback: TransformCallback) {
     // If there is a remainder, write it.
     if (this._remainder) {
-      // Creates the base64 remainder, and creates the lines.
-      const base64_remainder: string = this._remainder.toString("base64");
-      this.lines(base64_remainder);
+      // Creates the lines from the remainder.
+      this.lines(Buffer.from(this._remainder.toString("base64"), this._encoding));
 
       // Clears the remainder.
       this._remainder = undefined;

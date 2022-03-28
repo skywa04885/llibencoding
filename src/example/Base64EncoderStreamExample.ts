@@ -5,7 +5,7 @@ const data: string = 'Hello World this is a multiline string test, to check if t
   + 'I hope it does ;) since it would prevent more effort.';
 
 const transform: Base64EncoderStream = new Base64EncoderStream({
-  separator: '<CR><LF>\r\n'
+  separator: '<CR><LF>\r\n',
 });
 transform.pipe(process.stdout);
 
