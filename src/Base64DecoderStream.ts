@@ -2,16 +2,16 @@ import {LineDecoderStream} from "./LineDecoderStream";
 import {TransformCallback} from "stream";
 
 export class Base64DecoderStream extends LineDecoderStream {
-  protected _base64_remainder?: string;
+  protected _base64_remainder?: Buffer;
 
   /**
    * Decodes a single base64 line.
    * @param line
    */
-  public decode(line: string): Buffer {
+  public decode(line: Buffer): Buffer {
     // If there is a current remainder, add it to the line.
     if (this._base64_remainder) {
-      line = `${this._base64_remainder}${line}`;
+      line = Buffer.concat([ this._base64_remainder, line ]);
       this._base64_remainder = undefined;
     }
 
@@ -21,12 +21,12 @@ export class Base64DecoderStream extends LineDecoderStream {
     // If there are remaining chars, store them in the remainder
     //  and remove them from the line.
     if (n_remaining !== 0) {
-      this._base64_remainder = line.substring(line.length - n_remaining, line.length);
-      line = line.substring(0, line.length - n_remaining);
+      this._base64_remainder = line.slice(line.length - n_remaining, line.length);
+      line = line.slice(0, line.length - n_remaining);
     }
 
     // Returns the result.
-    return Buffer.from(line, "base64");
+    return Buffer.from(line.toString(this._encoding), "base64");
   }
 
   /**

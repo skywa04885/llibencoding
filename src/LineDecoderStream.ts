@@ -2,17 +2,15 @@ import {Transform, TransformCallback, TransformOptions} from "stream";
 
 export interface LineDecoderStreamOptions {
   stream?: TransformOptions,
-  separator?: string;
-  input_encoding?: BufferEncoding;
-  output_encoding?: BufferEncoding;
+  separator?: string | Buffer;
+  encoding?: BufferEncoding;
 }
 
 export class LineDecoderStream extends Transform {
-  protected _separator: string;
-  protected _input_encoding: BufferEncoding;
-  protected _output_encoding: BufferEncoding;
+  protected _encoding: BufferEncoding;
+  protected _separator: Buffer;
 
-  protected _remainder?: string;
+  protected _remainder?: Buffer;
 
   /**
    * Constructs a new LineDecoderStream.
@@ -21,17 +19,21 @@ export class LineDecoderStream extends Transform {
   public constructor(options: LineDecoderStreamOptions = {}) {
     super(options.stream ?? {});
 
-    this._separator = options.separator ?? "\r\n";
-    this._input_encoding = options.input_encoding ?? "utf-8";
-    this._output_encoding = options.output_encoding ?? "utf-8";
+    this._encoding = options.encoding ?? "utf-8";
+
+    let separator: Buffer | string = options.separator ?? "\r\n";
+    if (typeof separator === 'string') {
+      separator = Buffer.from(separator, this._encoding);
+    }
+    this._separator = separator;
   }
 
   /**
    * Decodes the given line.
    * @param line the line.
    */
-  public decode(line: string): Buffer {
-    return Buffer.from(line, this._output_encoding);
+  public decode(line: Buffer): Buffer {
+    return line;
   }
 
   /**
@@ -45,45 +47,42 @@ export class LineDecoderStream extends Transform {
     encoding: BufferEncoding,
     callback: TransformCallback
   ) {
-    // Creates string version of the chunk.
-    let chunk_str: string = chunk.toString(this._input_encoding);
-
     // Appends the remainder if there.
     if (this._remainder) {
-      chunk_str = `${this._remainder}${chunk_str}`;
+      chunk = Buffer.concat([ this._remainder, chunk ]);
       this._remainder = undefined;
     }
 
     // Starts looping over the lines, and decoding them.
-    let chunk_substr_start: number = 0;
+    let chunk_slice_start: number = 0;
     while (true) {
-      // Gets the end of the substring, in this case the location of the separator.
+      // Gets the end of the slice, in this case the location of the separator.
       //  and if it does not exist, break since we don't have a complete line.
-      const chunk_substr_end: number = chunk_str.indexOf(this._separator, chunk_substr_start);
-      if (chunk_substr_end === -1) {
+      const chunk_slice_end: number = chunk.indexOf(this._separator, chunk_slice_start, this._encoding);
+      if (chunk_slice_end === -1) {
         break;
       }
 
-      // Gets the chunk substring, and calls the decoding callback.
-      const chunk_substr: string = chunk_str.substring(
-        chunk_substr_start,
-        chunk_substr_end
+      // Gets the chunk slice, and calls the decoding callback.
+      const chunk_slice: Buffer = chunk.slice(
+        chunk_slice_start,
+        chunk_slice_end
       );
 
-      const chunk_decoded: Buffer = this.decode(chunk_substr);
+      const chunk_decoded: Buffer = this.decode(chunk_slice);
 
       // Pushes the decoded chunk to the stream.
       this.push(chunk_decoded);
 
-      // Sets the new start of the chunk substring.
-      chunk_substr_start = chunk_substr_end + this._separator.length;
+      // Sets the new start of the chunk slice.
+      chunk_slice_start = chunk_slice_end + this._separator.length;
     }
 
     // Creates the remainder if there is a non-complete line.
-    if (chunk_substr_start !== chunk_str.length) {
-      this._remainder = chunk_str.substring(
-        chunk_substr_start,
-        chunk_str.length
+    if (chunk_slice_start !== chunk.length) {
+      this._remainder = chunk.slice(
+        chunk_slice_start,
+        chunk.length
       );
     }
 
