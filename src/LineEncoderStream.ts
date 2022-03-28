@@ -42,10 +42,13 @@ export class LineEncoderStream extends Transform {
         this._max_line_length - this._cur_line_length;
 
       // Calculates the length of the new line to be added.
-      this._cur_line_length = plain.length - plain_substr_start;
-      if (this._cur_line_length > cur_line_remaining) {
-        this._cur_line_length = cur_line_remaining;
+      let plain_substr_len = plain.length - plain_substr_start;
+      if (plain_substr_len > cur_line_remaining) {
+        plain_substr_len = cur_line_remaining;
       }
+
+      // Adds the length to the current line length.
+      this._cur_line_length += plain_substr_len;
 
       // Gets the end position of the substring.
       const plain_substr_end: number =
@@ -57,15 +60,15 @@ export class LineEncoderStream extends Transform {
         plain_substr_end
       );
 
-      // Pushes the current line (with a possible separator) onto the readable stream.
-      this.push(
-        Buffer.from(
-          this._cur_line_length === this._max_line_length
-            ? `${plain_substr}${this._separator}`
-            : plain_substr,
-          this._encoding
-        )
-      );
+      // Checks if we need to create a new line, and push else just regular push.
+      if (this._cur_line_length === this._max_line_length) {
+        this.push(
+          Buffer.from(`${plain_substr}${this._separator}`, this._encoding)
+        );
+        this._cur_line_length = 0;
+      } else {
+        this.push(Buffer.from(plain_substr, this._encoding));
+      }
 
       // Sets the start to the current end.
       plain_substr_start = plain_substr_end;
