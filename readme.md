@@ -16,6 +16,8 @@ projects.
 
 #### Usage Example
 
+The following example usage is the same for all other encoders / decoders.
+
 ```ts
 import {Readable} from 'stream';
 import {Base64EncoderStream} from "llibencoding/dist/Base64EncoderStream";

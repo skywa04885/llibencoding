@@ -1,11 +1,29 @@
-import {Transform, TransformCallback, TransformOptions} from "stream";
+/*
+    Copyright 2022 Luke A.C.A. Rieff (Skywa04885)
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
+    to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+    and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+    WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
+
+import { Transform, TransformCallback, TransformOptions } from "stream";
 
 /**
  * Checks if the given byte needs to be encoded.
  * @param byte the byte to possibly encode.
  */
 export function quoted_printable_should_encode(byte: number): boolean {
-  return !((byte > 33 && byte < 126 && byte !== 61) || byte === 9 || byte === 32);
+  return !(
+    (byte > 33 && byte < 126 && byte !== 61) ||
+    byte === 9 ||
+    byte === 32
+  );
 }
 
 /**
@@ -34,12 +52,14 @@ export class QuotedPrintableEncoderStream extends Transform {
     super(options.stream ?? {});
 
     this._max_line_length = options.max_line_length ?? 76;
-    this.encoding = options.encoding ?? 'utf-8';
-    this._separator = options.separator ?? '\r\n';
+    this.encoding = options.encoding ?? "utf-8";
+    this._separator = options.separator ?? "\r\n";
   }
 
   public encode_line(line: Buffer) {
-    let cur_line: Buffer = Buffer.alloc(this._max_line_length + this._separator.length);
+    let cur_line: Buffer = Buffer.alloc(
+      this._max_line_length + this._separator.length
+    );
     let cur_line_offset: number = 0;
 
     const soft_line_break = () => {
@@ -55,16 +75,18 @@ export class QuotedPrintableEncoderStream extends Transform {
 
       // Sets the offset to zero, since we're starting a new line.
       cur_line_offset = 0;
-    }
+    };
 
     let index = 0;
     for (const byte of line) {
       // Gets the available size in the current line.
-      const cur_line_available: number = this._max_line_length - cur_line_offset;
+      const cur_line_available: number =
+        this._max_line_length - cur_line_offset;
 
       // Checks if the current byte has to be encoded, and how much space it would take up in the
       //  buffer, so we can decide if we need to make a new line or not.
-      const should_encode: boolean = quoted_printable_should_encode(byte) || (index + 1 === line.length);
+      const should_encode: boolean =
+        quoted_printable_should_encode(byte) || index + 1 === line.length;
       const required_size: number = should_encode ? 3 : 1;
 
       // Checks if we need to create a soft line break, this might be needed if it doesn't
@@ -107,7 +129,7 @@ export class QuotedPrintableEncoderStream extends Transform {
   ) {
     // If there is a remainder, add it.
     if (this._line_remainder) {
-      chunk = Buffer.concat([ this._line_remainder, chunk ]);
+      chunk = Buffer.concat([this._line_remainder, chunk]);
       this._line_remainder = undefined;
     }
 
@@ -116,16 +138,17 @@ export class QuotedPrintableEncoderStream extends Transform {
     while (true) {
       // Gets the end of the substring, in this case the location of the separator.
       //  and if it does not exist, break since we don't have a complete line.
-      const chunk_slice_end: number = chunk.indexOf(this._separator, chunk_slice_start, this.encoding);
+      const chunk_slice_end: number = chunk.indexOf(
+        this._separator,
+        chunk_slice_start,
+        this.encoding
+      );
       if (chunk_slice_end === -1) {
         break;
       }
 
       // Gets the line.
-      const line: Buffer = chunk.slice(
-        chunk_slice_start,
-        chunk_slice_end
-      );
+      const line: Buffer = chunk.slice(chunk_slice_start, chunk_slice_end);
 
       // Encodes the line.
       this.encode_line(line);
@@ -136,10 +159,7 @@ export class QuotedPrintableEncoderStream extends Transform {
 
     // Creates the remainder if there is a non-complete line.
     if (chunk_slice_start !== chunk.length) {
-      this._line_remainder = chunk.slice(
-        chunk_slice_start,
-        chunk.length
-      );
+      this._line_remainder = chunk.slice(chunk_slice_start, chunk.length);
     }
 
     // Calls the callback.
