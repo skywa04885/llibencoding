@@ -21,7 +21,7 @@ export class LineEncoderStream extends Transform {
   public constructor(options: LineEncoderStreamOptions = {}) {
     super(options.stream ?? {});
 
-    this._max_line_length = options.max_line_length ?? 78;
+    this._max_line_length = options.max_line_length ?? 76;
     this._separator = options.separator ?? "\r\n";
     this._encoding = options.encoding ?? "utf-8";
 
