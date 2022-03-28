@@ -18,7 +18,7 @@ export class LineDecoderStream extends Transform {
    * Constructs a new LineDecoderStream.
    * @param options the options.
    */
-  public constructor(options: LineDecoderStreamOptions) {
+  public constructor(options: LineDecoderStreamOptions = {}) {
     super(options.stream ?? {});
 
     this._separator = options.separator ?? "\r\n";

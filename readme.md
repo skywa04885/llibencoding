@@ -12,7 +12,7 @@ projects.
 2. Base64
 3. Hex
 4. QuotedPrintable
-5. SMTP/POP3 Message Escaping
+5. Dot Escaping (SMTP/POP3)
 
 #### Usage Example
 
