@@ -57,10 +57,16 @@ export class QuotedPrintableEncoderStream extends Transform {
   }
 
   public encode_line(line: Buffer) {
-    let cur_line: Buffer = Buffer.alloc(
+    let cur_line: Buffer = Buffer.allocUnsafe(
       this._max_line_length + this._separator.length
     );
     let cur_line_offset: number = 0;
+
+    const push_line = () => {
+      let buffer: Buffer = Buffer.allocUnsafe(cur_line_offset);
+      cur_line.copy(buffer, 0, 0, cur_line_offset);
+      this.push(buffer);
+    }
 
     const soft_line_break = () => {
       // Gets the line break string we're going to add.
@@ -71,7 +77,7 @@ export class QuotedPrintableEncoderStream extends Transform {
       cur_line_offset += line_break.length;
 
       // Writes the line.
-      this.push(cur_line.slice(0, cur_line_offset));
+      push_line();
 
       // Sets the offset to zero, since we're starting a new line.
       cur_line_offset = 0;
@@ -118,7 +124,7 @@ export class QuotedPrintableEncoderStream extends Transform {
       cur_line_offset += this._separator.length;
 
       // Pushes the buffer.
-      this.push(cur_line.slice(0, cur_line_offset));
+      push_line();
     }
   }
 
