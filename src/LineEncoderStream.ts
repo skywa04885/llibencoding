@@ -84,7 +84,9 @@ export class LineEncoderStream extends Transform {
         this.push(Buffer.concat([chunk_slice, this._separator]));
         this._cur_line_length = 0;
       } else {
-        this.push(chunk_slice);
+        let buffer: Buffer = Buffer.allocUnsafe(chunk_slice.length);
+        chunk_slice.copy(chunk_slice);
+        this.push(buffer);
       }
 
       // Sets the start to the current end.
