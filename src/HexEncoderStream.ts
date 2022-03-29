@@ -31,7 +31,7 @@ export class HexEncoderStream extends LineEncoderStream {
     callback: (error?: Error | null) => void
   ) {
     // Creates the hex string of the chunk, and makes the lines.
-    this.lines(Buffer.from(chunk.toString("hex"), this._encoding));
+    this._lines(Buffer.from(chunk.toString("hex"), this._encoding));
 
     // Calls the callback.
     callback();

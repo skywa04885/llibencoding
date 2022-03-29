@@ -26,8 +26,15 @@ this is the attachment text\r
 --XXXXboundary text--\r
 `;
 
-const dotEscapeEncodeStream: DotEscapeEncodeStream = new DotEscapeEncodeStream();
-dotEscapeEncodeStream.pipe(process.stdout);
-dotEscapeEncodeStream.on('end', () => console.log());
+const dotEscapeEncodeStream: DotEscapeEncodeStream = new DotEscapeEncodeStream({
+        buffer_output: false,
+        encoding: 'utf-8'
+});
+const readable: Readable = Readable.from(data);
+readable.pipe(dotEscapeEncodeStream);
 
-Readable.from(data).pipe(dotEscapeEncodeStream);
+(async function () {
+        for await (const chunk of dotEscapeEncodeStream) {
+                console.log(chunk)
+        };
+}) ();

@@ -45,7 +45,7 @@ export class Base64EncoderStream extends LineEncoderStream {
     chunk = chunk.slice(0, chunk.length - bytes_remaining);
 
     // Creates the base64 string of the chunk, and makes the lines.
-    this.lines(Buffer.from(chunk.toString("base64"), this._encoding));
+    this._lines(Buffer.from(chunk.toString("base64"), this._encoding));
 
     // Calls the callback.
     callback();
@@ -59,7 +59,7 @@ export class Base64EncoderStream extends LineEncoderStream {
     // If there is a remainder, write it.
     if (this._remainder) {
       // Creates the lines from the remainder.
-      this.lines(
+      this._lines(
         Buffer.from(this._remainder.toString("base64"), this._encoding)
       );
 

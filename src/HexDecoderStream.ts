@@ -19,25 +19,25 @@ export class HexDecoderStream extends LineDecoderStream {
   protected _hex_remainder?: Buffer;
 
   /**
-   * Decodes a single hex line.
-   * @param line
+   * Decodes a single hex buffer.
+   * @param buffer
    */
-  public decode(line: Buffer): Buffer {
+  protected _decode(buffer: Buffer): void {
     // If there is a current remainder, add it to the line.
     if (this._hex_remainder) {
-      line = Buffer.concat([this._hex_remainder, line]);
+      buffer = Buffer.concat([this._hex_remainder, buffer]);
       this._hex_remainder = undefined;
     }
 
     // If the number of chars is not a multiple of two, remove the last one to decode
     //  it later.
-    if (line.length % 2 !== 0) {
-      this._hex_remainder = line.slice(line.length - 1, line.length);
-      line = line.slice(0, line.length - 1);
+    if (buffer.length % 2 !== 0) {
+      this._hex_remainder = buffer.slice(buffer.length - 1, buffer.length);
+      buffer = buffer.slice(0, buffer.length - 1);
     }
 
-    // Returns the result.
-    return Buffer.from(line.toString(this._encoding), "hex");
+    // Pushes the result.
+    this._push_buffer(Buffer.from(buffer.toString(this._encoding), 'hex'));
   }
 
   /**

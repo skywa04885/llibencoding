@@ -17,14 +17,16 @@ import { Transform, TransformCallback, TransformOptions } from "stream";
 export interface LineEncoderStreamOptions {
   stream?: TransformOptions;
   max_line_length?: number;
-  separator?: Buffer | string;
+  separator?: string;
   encoding?: BufferEncoding;
+  buffer_output?: boolean;
 }
 
 export class LineEncoderStream extends Transform {
   protected _max_line_length: number; // The max length for a line.
   protected _encoding: BufferEncoding; // The encoding.
-  protected _separator: Buffer; // The line separator.
+  protected _separator: string; // The line separator.
+  protected _buffer_output?: boolean; // If we should output a buffer.
 
   protected _cur_line_length: number; // The length of the current line.
 
@@ -33,25 +35,68 @@ export class LineEncoderStream extends Transform {
    * @param options the options for the stream.
    */
   public constructor(options: LineEncoderStreamOptions = {}) {
-    super(options.stream ?? {});
+    // Sets the transform stream options.
+    super(options.stream);
 
+    // Sets the options, and their default values.
     this._max_line_length = options.max_line_length ?? 76;
     this._encoding = options.encoding ?? "utf-8";
+    this._separator = options.separator ?? '\r\n';
+    this._buffer_output = options.buffer_output ?? false;
 
-    let separator: Buffer | string = options.separator ?? "\r\n";
-    if (typeof separator === "string") {
-      separator = Buffer.from(separator, this._encoding);
+    // If we're not using a buffer output, set the output encoding.
+    if (!this._buffer_output) {
+      this.setEncoding(this._encoding);
     }
-    this._separator = separator;
 
+    // Gives the instance variables their default value.
     this._cur_line_length = 0;
+  }
+
+  /**
+   * Pushes the given slice to the stream.
+   * @param buffer the buffer.
+   * @param start the start of slice.
+   * @param end the end of slice.
+   */
+  protected _push_buffer(buffer: Buffer, start?: number, end?: number) {
+    if (this._buffer_output) {
+      // Allocates the buffer, copies the data and pushes it.
+      let buffer_copy: Buffer = Buffer.allocUnsafe(buffer.length);
+      buffer.copy(buffer_copy, 0, start, end);
+      this.push(buffer_copy);
+
+      // Don't write the string version.
+      return;
+    }
+
+    // Creates the string version of the buffer, and pushes it.
+    const buffer_string: string = buffer.toString(this._encoding, start, end);
+    this.push(buffer_string);
+  }
+
+  /**
+   * Pushes the given string onto the stream.
+   * @param str the string to push.
+   */
+  protected _push_string(str: string) {
+    if (this._buffer_output) {
+      // Pushes the buffer version of the string.
+      this.push(Buffer.from(str, this._encoding));
+
+      // Don't write the string version.
+      return;
+    }
+
+    // Pushes the full string.
+    this.push(str);
   }
 
   /**
    * Turns the given plain text into lines.
    * @param chunk the chunk.
    */
-  public lines(chunk: Buffer) {
+  protected _lines(chunk: Buffer) {
     let chunk_slice_start: number = 0;
 
     // Stays in loop as long as we've got more data to read.
@@ -81,12 +126,11 @@ export class LineEncoderStream extends Transform {
 
       // Checks if we need to create a new line, and push else just regular push.
       if (this._cur_line_length === this._max_line_length) {
-        this.push(Buffer.concat([chunk_slice, this._separator]));
+        this._push_buffer(chunk_slice);
+        this._push_string(this._separator);
         this._cur_line_length = 0;
       } else {
-        let buffer: Buffer = Buffer.allocUnsafe(chunk_slice.length);
-        chunk_slice.copy(chunk_slice);
-        this.push(buffer);
+        this._push_buffer(chunk_slice);
       }
 
       // Sets the start to the current end.
@@ -106,7 +150,7 @@ export class LineEncoderStream extends Transform {
     callback: (error?: Error | null) => void
   ) {
     // Creates the lines from the chunk.
-    this.lines(chunk);
+    this._lines(chunk);
 
     // Calls the callback to tell we're finished.
     callback();
@@ -120,7 +164,7 @@ export class LineEncoderStream extends Transform {
     // Checks if the current line length is less than the max line length
     //  if so we need to add a line separator (because the line was never finished).
     if (this._cur_line_length < this._max_line_length) {
-      this.push(this._separator);
+      this._push_string(this._separator);
       this._cur_line_length = 0;
     }
 

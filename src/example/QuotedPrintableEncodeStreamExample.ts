@@ -10,6 +10,6 @@ import { QuotedPrintableEncoderStream} from "../QuoatedPrintableEncoderStream";
   Readable.from(dat).pipe(encode);
   
   for await (const chunk of encode) {
-    console.log(chunk.toString('utf-8'));
+    console.log(chunk);
   }
 }) ();

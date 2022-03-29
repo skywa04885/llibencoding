@@ -16,13 +16,15 @@ import { Transform, TransformCallback, TransformOptions } from "stream";
 
 export interface LineDecoderStreamOptions {
   stream?: TransformOptions;
-  separator?: string | Buffer;
+  separator?: string;
   encoding?: BufferEncoding;
+  buffer_output?: boolean;
 }
 
 export class LineDecoderStream extends Transform {
   protected _encoding: BufferEncoding;
-  protected _separator: Buffer;
+  protected _separator: string;
+  protected _buffer_output: boolean;
 
   protected _remainder?: Buffer;
 
@@ -31,23 +33,55 @@ export class LineDecoderStream extends Transform {
    * @param options the options.
    */
   public constructor(options: LineDecoderStreamOptions = {}) {
-    super(options.stream ?? {});
+    super(options.stream);
 
+    // Sets the options.
     this._encoding = options.encoding ?? "utf-8";
+    this._separator = options.separator ?? '\r\n';
+    this._buffer_output = options.buffer_output ?? false;
 
-    let separator: Buffer | string = options.separator ?? "\r\n";
-    if (typeof separator === "string") {
-      separator = Buffer.from(separator, this._encoding);
+    // If we're not doing a buffer output, set the stream encoding.
+    if (!this._buffer_output) {
+      this.setEncoding(this._encoding);
     }
-    this._separator = separator;
   }
 
   /**
-   * Decodes the given line.
-   * @param line the line.
+   * Pushes the given buffer and it's slice onto the stream.
+   * @param buffer the buffer.
+   * @param start the start of the slice.
+   * @param end the end of the slice.
    */
-  public decode(line: Buffer): Buffer {
-    return line;
+  protected _push_buffer(buffer: Buffer, start?: number, end?: number): void {
+    if (this._buffer_output) {
+      let buffer_copy: Buffer = Buffer.allocUnsafe(buffer.length);
+      buffer.copy(buffer_copy);
+      this.push(buffer_copy);
+      return;
+    }
+
+    this.push(buffer.toString(this._encoding, start, end));
+  }
+
+  /**
+   * Pushes the given string onto the stream.
+   * @param str the string to push.
+   */
+  protected _push_string(str: string): void {
+    if (this._buffer_output) {
+      this.push(Buffer.from(str));
+      return;
+    }
+
+    this.push(str);
+  }
+
+  /**
+   * Decodes the given buffer.
+   * @param buffer the buffer.
+   */
+  protected _decode(buffer: Buffer): void {
+    this._push_buffer(buffer);
   }
 
   /**
@@ -87,10 +121,8 @@ export class LineDecoderStream extends Transform {
         chunk_slice_end
       );
 
-      const chunk_decoded: Buffer = this.decode(chunk_slice);
-
-      // Pushes the decoded chunk to the stream.
-      this.push(chunk_decoded);
+      // Decodes the slice.
+      this._decode(chunk_slice);
 
       // Sets the new start of the chunk slice.
       chunk_slice_start = chunk_slice_end + this._separator.length;
@@ -113,10 +145,7 @@ export class LineDecoderStream extends Transform {
     // Checks if there still is a remainder, if so treat it like a line and decode it.
     if (this._remainder) {
       // Decode the remainder.
-      const remainder_decoded: Buffer = this.decode(this._remainder);
-
-      // Pushes the decoded remainder to the stream.
-      this.push(remainder_decoded);
+      this._decode(this._remainder);
 
       // Remove the remainder.
       this._remainder = undefined;
