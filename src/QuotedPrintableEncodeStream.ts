@@ -35,14 +35,14 @@ export function quoted_printable_encode_byte(byte: number) {
   return `=${byte.toString(16)}`;
 }
 
-export interface QuotedPrintableEncoderStreamOptions {
+export interface QuotedPrintableEncodeStreamOptions {
   stream?: TransformOptions;
   max_line_length?: number;
   encoding?: BufferEncoding;
   separator?: string;
 }
 
-export class QuotedPrintableEncoderStream extends Transform {
+export class QuotedPrintableEncodeStream extends Transform {
   protected _max_line_length: number;
   protected _encoding: BufferEncoding;
   protected _separator: string;
@@ -53,7 +53,7 @@ export class QuotedPrintableEncoderStream extends Transform {
    * Constructs a new quoted printable encoder stream.
    * @param options the options.
    */
-  public constructor(options: QuotedPrintableEncoderStreamOptions = {}) {
+  public constructor(options: QuotedPrintableEncodeStreamOptions = {}) {
     super(Object.assign({
       encoding: options.encoding ?? 'utf-8',
     }, options.stream));
