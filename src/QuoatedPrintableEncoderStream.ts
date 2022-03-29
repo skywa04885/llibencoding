@@ -93,7 +93,7 @@ export class QuotedPrintableEncoderStream extends Transform {
       // Checks if the current byte has to be encoded, and how much space it would take up in the
       //  buffer, so we can decide if we need to make a new line or not.
       const should_encode: boolean =
-        quoted_printable_should_encode(byte) || index + 1 === line.length;
+        quoted_printable_should_encode(byte) || ((index + 1 === line.length) && (byte === 9 || byte === 32));
       const required_size: number = should_encode ? 3 : 1;
 
       // Checks if we need to create a soft line break, this might be needed if it doesn't
