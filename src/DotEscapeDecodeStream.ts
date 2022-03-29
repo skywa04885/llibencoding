@@ -16,16 +16,17 @@ import { LineDecoderStream } from "./LineDecoderStream";
 
 export class DotEscapeDecodeStream extends LineDecoderStream {
   /**
-   * Gets called when there is a new line to encode.
-   * @param line the line to encode.
+   * Gets called when there is a new buffer to encode.
+   * @param buffer the buffer to encode.
    */
-  public _decode(line: Buffer): Buffer {
+  protected _decode(buffer: Buffer): void {
     // Escapes a dot, making it a double dot.
-    if (line.length === 2 && line.at(0) === 46 && line.at(1) === 46) {
-      line = Buffer.from([46]);
+    if (buffer.length === 2 && buffer.at(0) === 46 && buffer.at(1) === 46) {
+      buffer = Buffer.from([46]);
     }
 
-    // Returns the encoded line.
-    return Buffer.concat([line, this._separator]);
+    // Pushes the encoded line.
+    this._push_buffer(buffer);
+    this._push_string(this._separator);
   }
 }
