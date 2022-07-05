@@ -32,7 +32,8 @@ export function quoted_printable_should_encode(byte: number): boolean {
  * @param byte the byte to encode.
  */
 export function quoted_printable_encode_byte(byte: number) {
-  return `=${byte.toString(16)}`;
+  const hex: string = `=${byte <= 0x0F ? '0' : ''}${byte.toString(16)}`;
+  return hex;
 }
 
 export interface QuotedPrintableEncodeStreamOptions {
@@ -40,12 +41,14 @@ export interface QuotedPrintableEncodeStreamOptions {
   max_line_length?: number;
   encoding?: BufferEncoding;
   separator?: string;
+  buffer_output?: boolean;
 }
 
 export class QuotedPrintableEncodeStream extends Transform {
   protected _max_line_length: number;
   protected _encoding: BufferEncoding;
   protected _separator: string;
+  protected _buffer_output: boolean;
 
   protected _line_remainder?: Buffer;
 
@@ -54,24 +57,29 @@ export class QuotedPrintableEncodeStream extends Transform {
    * @param options the options.
    */
   public constructor(options: QuotedPrintableEncodeStreamOptions = {}) {
-    super(Object.assign({
-      encoding: options.encoding ?? 'utf-8',
-    }, options.stream));
+    super(options.stream);
 
     this._max_line_length = options.max_line_length ?? 76;
     this._encoding = options.encoding ?? "utf-8";
     this._separator = options.separator ?? "\r\n";
+    this._buffer_output = options.buffer_output ?? false;
+
+    if (!options.buffer_output) {
+      this.setEncoding(this._encoding);
+    }
   }
 
   /**
-   * Writes an slice of the given buffer to the stream.
+   * Writes a slice of the given buffer to the stream.
    * @param buffer the buffer to push.
    * @param start the start of the slice.
    * @param end the end of the slice.
    */
   protected _push_buffer(buffer: Buffer, start?: number, end?: number) {
-    const buffer_string: string = buffer.toString('utf-8', start, end);
-    this.push(buffer_string);
+    const slice: Buffer = buffer.slice(start, end);
+    const copy: Buffer = Buffer.alloc(slice.length);
+    slice.copy(copy);
+    this.push(copy);
   }
 
   /**
